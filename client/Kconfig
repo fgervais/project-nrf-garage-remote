@@ -1,0 +1,14 @@
+mainmenu "Main Application"
+
+config APP_SUSPEND_CONSOLE
+	bool "Suspend console"
+	help
+	  Suspend console.
+
+config APP_MAIN_LOOP_PERIOD_SEC
+	int "Main loop period (sec)"
+	default 10
+	help
+	  Main loop period in seconds.
+
+source "Kconfig.zephyr"
