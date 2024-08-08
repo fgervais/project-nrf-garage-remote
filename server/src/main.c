@@ -48,8 +48,7 @@ int main(void)
 
 	LOG_INF("\n\n🚀 MAIN START (%s) 🚀\n", APP_VERSION_FULL);
 
-	reset_cause = show_reset_cause();
-	clear_reset_cause();
+	reset_cause = show_and_clear_reset_cause();
 	
 	if (app_event_manager_init()) {
 		LOG_ERR("Event manager not initialized");
