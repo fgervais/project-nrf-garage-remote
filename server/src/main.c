@@ -56,6 +56,15 @@ int main(void)
 		module_set_state(MODULE_STATE_READY);
 	}
 
+	ret = openthread_my_start();
+	if (ret < 0) {
+		LOG_ERR("Could not start openthread");
+		return ret;
+	}
+
+	LOG_INF("💤 waiting for openthread to be ready");
+	openthread_wait_for_ready();
+
 	LOG_INF("🆗 initialized");
 
 #if defined(CONFIG_APP_SUSPEND_CONSOLE)
