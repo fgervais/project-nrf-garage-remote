@@ -64,7 +64,7 @@ int main(void)
 	}
 
 	LOG_INF("💤 waiting for openthread to be ready");
-	openthread_wait_for_ready();
+	openthread_wait(OT_ROLE_SET | OT_MESH_LOCAL_ADDR_SET);
 
 	LOG_INF("🆗 initialized");
 
