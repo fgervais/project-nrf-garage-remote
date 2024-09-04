@@ -14,7 +14,7 @@ manifest:
       path: myboards
     - name: zephyr-mymodule-base
       url: https://github.com/fgervais/zephyr-mymodule-base.git
-      revision: 28414f4883826dac8bfd26e6ff704ee87ef63e1d
+      revision: 2fd687eb9560543193e461be754135299415ba51
       path: mymodules/base
   self:
     path: application
