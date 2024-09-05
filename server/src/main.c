@@ -3,6 +3,7 @@
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net/coap_service.h>
+#include <zephyr/net/net_if.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/debug/thread_analyzer.h>
 
@@ -21,12 +22,38 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 #define BUTTON_PRESS_EVENT		BIT(0)
 
+#define ALL_NODES_LOCAL_COAP_MCAST \
+        { { { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xfd } } }
+
 
 static K_EVENT_DEFINE(button_events);
 
 static const uint16_t coap_port = 5683;
 COAP_SERVICE_DEFINE(coap_server, NULL, &coap_port, 0);
 
+
+int join_coap_multicast_group(void)
+{
+
+	struct in6_addr mcast_addr6 = ALL_NODES_LOCAL_COAP_MCAST;
+	struct net_if_mcast_addr *mcast;
+	struct net_if *iface;
+
+
+	iface = net_if_get_default();
+	if (!iface) {
+		LOG_ERR("Could not get the default interface");
+		return -ENOENT;
+	}
+
+	mcast = net_if_ipv6_maddr_add(iface, &mcast_addr6);
+	if (!mcast) {
+		LOG_ERR("Could not add multicast address to interface");
+		return -ENOENT;
+	}
+
+	return 0;
+}
 
 int main(void)
 {
@@ -70,7 +97,13 @@ int main(void)
 	LOG_INF("💤 waiting for openthread to be ready");
 	openthread_wait(OT_ROLE_SET | OT_MESH_LOCAL_ADDR_SET);
 
+	join_coap_multicast_group();
+
 	ret = coap_service_start(&coap_server);
+	if (ret < 0) {
+		LOG_ERR("Could not start COAP service");
+		return ret;
+	}
 
 	LOG_INF("🆗 initialized");
 
