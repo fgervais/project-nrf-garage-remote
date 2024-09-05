@@ -2,6 +2,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/kernel.h>
+#include <zephyr/net/coap_service.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/debug/thread_analyzer.h>
 
@@ -22,6 +23,9 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 
 static K_EVENT_DEFINE(button_events);
+
+static const uint16_t coap_port = 5683;
+COAP_SERVICE_DEFINE(coap_server, NULL, &coap_port, 0);
 
 
 int main(void)
@@ -65,6 +69,8 @@ int main(void)
 
 	LOG_INF("💤 waiting for openthread to be ready");
 	openthread_wait(OT_ROLE_SET | OT_MESH_LOCAL_ADDR_SET);
+
+	ret = coap_service_start(&coap_server);
 
 	LOG_INF("🆗 initialized");
 
