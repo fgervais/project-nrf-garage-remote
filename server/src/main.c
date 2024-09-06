@@ -39,6 +39,7 @@ int join_coap_multicast_group(void)
 	struct net_if_mcast_addr *mcast;
 	struct net_if *iface;
 
+	LOG_INF("joining the COAP multicast group");
 
 	iface = net_if_get_default();
 	if (!iface) {
@@ -97,8 +98,13 @@ int main(void)
 	LOG_INF("💤 waiting for openthread to be ready");
 	openthread_wait(OT_ROLE_SET | OT_MESH_LOCAL_ADDR_SET);
 
-	join_coap_multicast_group();
+	ret = join_coap_multicast_group();
+	if (ret < 0) {
+		LOG_ERR("Could not join the COAP multicast group");
+		return ret;
+	}
 
+	LOG_INF("starting the COAP service");
 	ret = coap_service_start(&coap_server);
 	if (ret < 0) {
 		LOG_ERR("Could not start COAP service");
