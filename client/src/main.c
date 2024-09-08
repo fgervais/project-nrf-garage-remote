@@ -2,6 +2,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/kernel.h>
+#include <zephyr/net/coap_client.h>
+#include <zephyr/net/socket.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/debug/thread_analyzer.h>
 
@@ -13,15 +15,73 @@
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 #include <app_version.h>
+#include <mymodule/base/openthread.h>
 #include <mymodule/base/reset.h>
 #include <mymodule/base/watchdog.h>
 
 
 #define BUTTON_PRESS_EVENT		BIT(0)
 
+#define ALL_NODES_LOCAL_COAP_MCAST \
+        { { { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xfd } } }
+#define COAP_PORT	5683
+#define COAP_PATH	"door"
+
 
 static K_EVENT_DEFINE(button_events);
 
+static struct coap_client coap_client;
+
+
+static void on_coap_response(int16_t result_code, size_t offset,
+			     const uint8_t *payload, size_t len,
+			     bool last_block, void *user_data)
+{
+	int *sockfd = (int *)user_data;
+
+	LOG_INF("CoAP response, result_code=%d, offset=%u, len=%u", result_code, offset, len);
+
+	if ((COAP_RESPONSE_CODE_CONTENT == result_code) && last_block) {
+		size_t total_size = offset + len;
+
+		LOG_INF("CoAP download done, got %u bytes", total_size);
+	} else if (COAP_RESPONSE_CODE_CONTENT != result_code) {
+		LOG_ERR("Error during CoAP download, result_code=%d", result_code);
+	}
+
+	zsock_close(*sockfd);
+}
+
+static void toggle_door_state(struct coap_client *client, struct sockaddr *sa)
+{
+	int ret;
+	int sockfd;
+	struct coap_client_request request = {
+		.method = COAP_METHOD_GET,
+		.confirmable = true,
+		.path = COAP_PATH,
+		.payload = NULL,
+		.len = 0,
+		.cb = on_coap_response,
+		.options = NULL,
+		.num_options = 0,
+		.user_data = &sockfd
+	};
+
+	sockfd = zsock_socket(sa->sa_family, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		LOG_ERR("Failed to create socket, err %d", errno);
+		return;
+	}
+
+	LOG_INF("Starting CoAP download using %s", (AF_INET == sa->sa_family) ? "IPv4" : "IPv6");
+
+	ret = coap_client_req(client, sockfd, sa, &request, NULL);
+	if (ret) {
+		LOG_ERR("Failed to send CoAP request, err %d", ret);
+		return;
+	}
+}
 
 int main(void)
 {
@@ -33,6 +93,13 @@ int main(void)
 	uint32_t reset_cause;
 	int main_wdt_chan_id = -1;
 	uint32_t events;
+
+	struct sockaddr_in6 sockaddr6 = {
+		.sin6_family = AF_INET6,
+		.sin6_port = COAP_PORT,
+		.sin6_addr = ALL_NODES_LOCAL_COAP_MCAST
+	};
+
 
 	ret = watchdog_new_channel(wdt, &main_wdt_chan_id);
 	if (ret < 0) {
@@ -57,6 +124,21 @@ int main(void)
 		module_set_state(MODULE_STATE_READY);
 	}
 
+	ret = openthread_my_start();
+	if (ret < 0) {
+		LOG_ERR("Could not start openthread");
+		return ret;
+	}
+
+	LOG_INF("💤 waiting for openthread to be ready");
+	openthread_wait(OT_ROLE_SET | OT_MESH_LOCAL_ADDR_SET);
+
+	ret = coap_client_init(&coap_client, NULL);
+	if (ret) {
+		LOG_ERR("Failed to init coap client, err %d", ret);
+		return ret;
+	}
+
 	LOG_INF("🆗 initialized");
 
 #if defined(CONFIG_APP_SUSPEND_CONSOLE)
@@ -68,6 +150,8 @@ int main(void)
 #endif
 
 	thread_analyzer_print();
+
+	toggle_door_state(&coap_client, (struct sockaddr *)&sockaddr6);
 
 	LOG_INF("┌──────────────────────────────────────────────────────────┐");
 	LOG_INF("│ Entering main loop                                       │");

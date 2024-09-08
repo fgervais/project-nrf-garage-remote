@@ -34,7 +34,6 @@ COAP_SERVICE_DEFINE(coap_server, NULL, &coap_port, 0);
 
 int join_coap_multicast_group(void)
 {
-
 	struct in6_addr mcast_addr6 = ALL_NODES_LOCAL_COAP_MCAST;
 	struct net_if_mcast_addr *mcast;
 	struct net_if *iface;
