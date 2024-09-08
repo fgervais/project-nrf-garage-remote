@@ -14,6 +14,8 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
+#include <errno.h>
+
 #include <app_version.h>
 #include <mymodule/base/openthread.h>
 #include <mymodule/base/reset.h>
@@ -52,7 +54,7 @@ static void on_coap_response(int16_t result_code, size_t offset,
 	zsock_close(*sockfd);
 }
 
-static void toggle_door_state(struct coap_client *client, struct sockaddr *sa)
+static int toggle_door_state(struct coap_client *client, struct sockaddr *sa)
 {
 	int ret;
 	int sockfd;
@@ -71,16 +73,18 @@ static void toggle_door_state(struct coap_client *client, struct sockaddr *sa)
 	sockfd = zsock_socket(sa->sa_family, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
 		LOG_ERR("Failed to create socket, err %d", errno);
-		return;
+		return -errno;
 	}
 
-	LOG_INF("Starting CoAP download using %s", (AF_INET == sa->sa_family) ? "IPv4" : "IPv6");
+	LOG_INF("Starting CoAP download");
 
 	ret = coap_client_req(client, sockfd, sa, &request, NULL);
 	if (ret) {
 		LOG_ERR("Failed to send CoAP request, err %d", ret);
-		return;
+		return ret;
 	}
+
+	return 0;
 }
 
 int main(void)
@@ -151,7 +155,11 @@ int main(void)
 
 	thread_analyzer_print();
 
-	toggle_door_state(&coap_client, (struct sockaddr *)&sockaddr6);
+	ret = toggle_door_state(&coap_client, (struct sockaddr *)&sockaddr6);
+	if (ret < 0) {
+		LOG_ERR("Could not toggle door state");
+		return ret;
+	}
 
 	LOG_INF("┌──────────────────────────────────────────────────────────┐");
 	LOG_INF("│ Entering main loop                                       │");
