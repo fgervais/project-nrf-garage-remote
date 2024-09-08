@@ -51,6 +51,8 @@ static void on_coap_response(int16_t result_code, size_t offset,
 		LOG_ERR("Error during CoAP download, result_code=%d", result_code);
 	}
 
+	openthread_request_normal_latency("coap response");
+
 	zsock_close(*sockfd);
 }
 
@@ -76,11 +78,14 @@ static int toggle_door_state(struct coap_client *client, struct sockaddr *sa)
 		return -errno;
 	}
 
-	LOG_INF("Starting CoAP download");
+	LOG_INF("Starting CoAP request");
+
+	openthread_request_low_latency("coap request");
 
 	ret = coap_client_req(client, sockfd, sa, &request, NULL);
 	if (ret) {
 		LOG_ERR("Failed to send CoAP request, err %d", ret);
+		openthread_request_normal_latency("coap request error");
 		return ret;
 	}
 
