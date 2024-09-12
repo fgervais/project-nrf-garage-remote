@@ -39,7 +39,7 @@ static void on_coap_response(int16_t result_code, size_t offset,
 			     const uint8_t *payload, size_t len,
 			     bool last_block, void *user_data)
 {
-	int *sockfd = (int *)user_data;
+	// int *sockfd = (int *)user_data;
 
 	LOG_INF("CoAP response, result_code=%d, offset=%u, len=%u", result_code, offset, len);
 
@@ -53,13 +53,13 @@ static void on_coap_response(int16_t result_code, size_t offset,
 
 	openthread_request_normal_latency("coap response");
 
-	zsock_close(*sockfd);
+	// zsock_close(*sockfd);
 }
 
-static int toggle_door_state(struct coap_client *client, struct sockaddr *sa)
+static int toggle_door_state(struct coap_client *client, int sockfd, struct sockaddr *sa)
 {
 	int ret;
-	int sockfd;
+	// int sockfd;
 	struct coap_client_request request = {
 		.method = COAP_METHOD_POST,
 		.confirmable = true,
@@ -69,18 +69,19 @@ static int toggle_door_state(struct coap_client *client, struct sockaddr *sa)
 		.cb = on_coap_response,
 		.options = NULL,
 		.num_options = 0,
-		.user_data = &sockfd
+		// .user_data = &sockfd,
+		.user_data = NULL,
 	};
 
-	sockfd = zsock_socket(sa->sa_family, SOCK_DGRAM, 0);
-	if (sockfd < 0) {
-		LOG_ERR("Failed to create socket, err %d", errno);
-		return -errno;
-	}
+	// sockfd = zsock_socket(sa->sa_family, SOCK_DGRAM, 0);
+	// if (sockfd < 0) {
+	// 	LOG_ERR("Failed to create socket, err %d", errno);
+	// 	return -errno;
+	// }
 
 	LOG_INF("Starting CoAP request");
 
-	openthread_request_low_latency("coap request");
+	// openthread_request_low_latency("coap request");
 
 	ret = coap_client_req(client, sockfd, sa, &request, NULL);
 	if (ret) {
@@ -102,6 +103,7 @@ int main(void)
 	uint32_t reset_cause;
 	int main_wdt_chan_id = -1;
 	uint32_t events;
+	int sockfd;
 
 	struct sockaddr_in6 sockaddr6 = {
 		.sin6_family = AF_INET6,
@@ -150,6 +152,12 @@ int main(void)
 		return ret;
 	}
 
+	sockfd = zsock_socket(((struct sockaddr *)&sockaddr6)->sa_family, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		LOG_ERR("Failed to create socket, err %d", errno);
+		return -errno;
+	}
+
 	LOG_INF("🆗 initialized");
 
 #if defined(CONFIG_APP_SUSPEND_CONSOLE)
@@ -161,12 +169,6 @@ int main(void)
 #endif
 
 	thread_analyzer_print();
-
-	ret = toggle_door_state(&coap_client, (struct sockaddr *)&sockaddr6);
-	if (ret < 0) {
-		LOG_ERR("Could not toggle door state");
-		return ret;
-	}
 
 	LOG_INF("┌──────────────────────────────────────────────────────────┐");
 	LOG_INF("│ Entering main loop                                       │");
@@ -183,6 +185,12 @@ int main(void)
 
 		if (events & BUTTON_PRESS_EVENT) {
 			LOG_INF("handling button press event");
+			ret = toggle_door_state(&coap_client,
+						sockfd,
+						(struct sockaddr *)&sockaddr6);
+			if (ret < 0) {
+				LOG_ERR("Could not toggle door state");
+			}
 		}
 
 		LOG_INF("🦴 feed watchdog");
