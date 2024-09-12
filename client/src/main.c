@@ -26,6 +26,12 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 #define ALL_NODES_LOCAL_COAP_MCAST \
         { { { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xfd } } }
+#define ALL_NODES_MCAST \
+        { { { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 } } }
+#define DIRECT_IP6_ADDRESS \
+        { { { 0xfd, 0xb5, 0x3, 0x41, 0xc7, 0x36, 0x7c, 0x8d, 0xb5, 0x05, 0xd4, 0x61, 0xec, 0xbd, 0x97, 0x89 } } }
+#define DIRECT_LL_IP6_ADDRESS \
+        { { { 0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0xdc, 0x8c, 0xbc, 0xd0, 0x9a, 0xb5, 0x63, 0xb4 } } }
 #define COAP_PORT	5683
 #define COAP_PATH	"door"
 
@@ -107,8 +113,10 @@ int main(void)
 
 	struct sockaddr_in6 sockaddr6 = {
 		.sin6_family = AF_INET6,
-		.sin6_port = COAP_PORT,
-		.sin6_addr = ALL_NODES_LOCAL_COAP_MCAST
+		.sin6_port = htons(COAP_PORT),
+		// .sin6_addr = DIRECT_IP6_ADDRESS,
+		.sin6_addr = ALL_NODES_MCAST,
+		// .sin6_addr = DIRECT_LL_IP6_ADDRESS,
 	};
 
 
@@ -152,7 +160,7 @@ int main(void)
 		return ret;
 	}
 
-	sockfd = zsock_socket(((struct sockaddr *)&sockaddr6)->sa_family, SOCK_DGRAM, 0);
+	sockfd = zsock_socket(sockaddr6.sin6_family, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
 		LOG_ERR("Failed to create socket, err %d", errno);
 		return -errno;
