@@ -61,7 +61,7 @@ static int toggle_door_state(struct coap_client *client, struct sockaddr *sa)
 	int ret;
 	int sockfd;
 	struct coap_client_request request = {
-		.method = COAP_METHOD_GET,
+		.method = COAP_METHOD_POST,
 		.confirmable = true,
 		.path = COAP_PATH,
 		.payload = NULL,
