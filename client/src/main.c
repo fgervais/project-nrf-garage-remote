@@ -51,11 +51,10 @@ static void on_coap_response(int16_t result_code, size_t offset,
 
 	LOG_INF("CoAP response, result_code=%d, offset=%u, len=%u", result_code, offset, len);
 
-	if ((COAP_RESPONSE_CODE_CONTENT == result_code) && last_block) {
-		size_t total_size = offset + len;
-
-		LOG_INF("CoAP download done, got %u bytes", total_size);
-	} else if (COAP_RESPONSE_CODE_CONTENT != result_code) {
+	if (result_code == COAP_RESPONSE_CODE_CHANGED) {
+		LOG_INF("🎉 CoAP succeeded");
+	}
+	else {
 		LOG_ERR("Error during CoAP download, result_code=%d", result_code);
 	}
 
@@ -89,7 +88,7 @@ static int toggle_door_state(struct coap_client *client, int sockfd, struct sock
 
 	LOG_INF("Starting CoAP request");
 
-	// openthread_request_low_latency("coap request");
+	openthread_request_low_latency("coap request");
 
 	ret = coap_client_req(client, sockfd, sa, &request, NULL);
 	if (ret) {
