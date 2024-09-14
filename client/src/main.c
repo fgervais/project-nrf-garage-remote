@@ -124,6 +124,7 @@ int main(void)
 	int main_wdt_chan_id = -1;
 	uint32_t events;
 	int sockfd;
+	int mcast_hops = 8;
 
 	struct sockaddr_in6 sockaddr6 = {
 		.sin6_family = AF_INET6,
@@ -183,6 +184,12 @@ int main(void)
 		LOG_ERR("Failed to create socket, err %d", errno);
 		return -errno;
 	}
+
+	ret = zsock_setsockopt(sockfd,
+			       IPPROTO_IPV6,
+			       IPV6_MULTICAST_HOPS,
+			       &mcast_hops,
+                               sizeof(mcast_hops));
 
 	LOG_INF("🆗 initialized");
 
