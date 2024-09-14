@@ -24,16 +24,29 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 #define BUTTON_PRESS_EVENT		BIT(0)
 
+// [00:00:13.266,204] <inf> openthread: 🗞️  address added
+// [00:00:13.266,265] <inf> openthread: fdb5:341:c736:7c8d:b505:d461:ecbd:9789
+// [00:00:13.266,265] <inf> openthread: └── ✅ mesh local address
+// [00:00:13.266,357] <inf> openthread: fe80::dc8c:bcd0:9ab5:63b4
+// [00:00:13.266,357] <inf> openthread: └── link-local address
+// [00:00:13.266,418] <inf> openthread: fd04:2240:0:102:ae2d:71b0:f81e:d5f8
+// [00:00:13.266,448] <inf> openthread: ├── ✅ routable address
+// [00:00:13.266,479] <inf> openthread: └── prefix: fd04:2240:0:102::
+// [00:00:13.266,540] <inf> openthread:     ├── default: no
+// [00:00:13.266,571] <inf> openthread:     └── preferred: yes
+
 #define ALL_NODES_LOCAL_COAP_MCAST \
         { { { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xfd } } }
 #define ALL_NODES_MCAST \
-        { { { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 } } }
-#define ALL_ROUTERS_MCAST \
-        { { { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 } } }
+        { { { 0xff, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 } } }
+#define ALL_FTD_MCAST \
+        { { { 0xff, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 } } }
 #define DIRECT_IP6_ADDRESS \
         { { { 0xfd, 0xb5, 0x03, 0x41, 0xc7, 0x36, 0x7c, 0x8d, 0xb5, 0x05, 0xd4, 0x61, 0xec, 0xbd, 0x97, 0x89 } } }
 #define DIRECT_LL_IP6_ADDRESS \
         { { { 0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0xdc, 0x8c, 0xbc, 0xd0, 0x9a, 0xb5, 0x63, 0xb4 } } }
+#define DIRECT_GLOBAL_IP6_ADDRESS \
+        { { { 0xfd, 0x04, 0x22, 0x40, 0, 0, 0x01, 0x02, 0xae, 0x2d, 0x71, 0xb0, 0xf8, 0x1e, 0xd5, 0xf8 } } }
 #define COAP_PORT	5683
 #define COAP_PATH	"door"
 
@@ -116,10 +129,12 @@ int main(void)
 		.sin6_family = AF_INET6,
 		.sin6_port = htons(COAP_PORT),
 		// .sin6_addr = ALL_NODES_LOCAL_COAP_MCAST,
-		.sin6_addr = DIRECT_IP6_ADDRESS,
+		// .sin6_addr = DIRECT_IP6_ADDRESS,
 		// .sin6_addr = ALL_NODES_MCAST,
+		.sin6_addr = { { { 0xff, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 } } },
 		// .sin6_addr = ALL_ROUTERS_MCAST,
 		// .sin6_addr = DIRECT_LL_IP6_ADDRESS,
+		// .sin6_addr = DIRECT_GLOBAL_IP6_ADDRESS,
 	};
 
 
