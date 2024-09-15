@@ -101,7 +101,7 @@ static int toggle_door_state(struct coap_client *client, int sockfd, struct sock
 
 	LOG_INF("Starting CoAP request");
 
-	// openthread_request_low_latency("coap request");
+	openthread_request_low_latency("coap request");
 
 	ret = coap_client_req(client, sockfd, sa, &request, NULL);
 	if (ret) {
