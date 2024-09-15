@@ -129,13 +129,7 @@ int main(void)
 	struct sockaddr_in6 sockaddr6 = {
 		.sin6_family = AF_INET6,
 		.sin6_port = htons(COAP_PORT),
-		// .sin6_addr = ALL_NODES_LOCAL_COAP_MCAST,
-		// .sin6_addr = DIRECT_IP6_ADDRESS,
-		// .sin6_addr = ALL_NODES_MCAST,
-		// .sin6_addr = { { { 0xff, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 } } },
 		.sin6_addr = ALL_FTD_MCAST,
-		// .sin6_addr = DIRECT_LL_IP6_ADDRESS,
-		// .sin6_addr = DIRECT_GLOBAL_IP6_ADDRESS,
 	};
 
 
