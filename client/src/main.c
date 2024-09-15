@@ -62,7 +62,8 @@ static void on_coap_response(int16_t result_code, size_t offset,
 {
 	// int *sockfd = (int *)user_data;
 
-	LOG_INF("CoAP response, result_code=%d, offset=%u, len=%u", result_code, offset, len);
+	LOG_INF("CoAP response, result_code=%d, offset=%u, len=%u, last_block=%d",
+		result_code, offset, len, last_block);
 
 	if (result_code == COAP_RESPONSE_CODE_CHANGED) {
 		LOG_INF("🎉 CoAP succeeded");
