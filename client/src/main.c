@@ -131,6 +131,7 @@ int main(void)
 		.sin6_family = AF_INET6,
 		.sin6_port = htons(COAP_PORT),
 		.sin6_addr = ALL_FTD_MCAST,
+		// .sin6_addr = DIRECT_IP6_ADDRESS,
 	};
 
 
