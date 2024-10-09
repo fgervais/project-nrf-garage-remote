@@ -83,16 +83,15 @@ static int door_post(struct coap_resource *resource,
 	uint8_t type;
 	uint8_t token_length;
 	uint16_t id;
-	int r;
+	int ret;
 
 	code = coap_header_get_code(request);
 	type = coap_header_get_type(request);
 	id = coap_header_get_id(request);
 	token_length = coap_header_get_token(request, token);
 
-	LOG_INF("*******");
-	LOG_INF("type: %u code %u id %u", type, code, id);
-	LOG_INF("*******");
+	LOG_INF("📬 POST (door)");
+	LOG_INF("└── type: %u code %u id %u", type, code, id);
 
 	payload = coap_packet_get_payload(request, &payload_len);
 	if (payload) {
@@ -105,16 +104,16 @@ static int door_post(struct coap_resource *resource,
 		type = COAP_TYPE_NON_CON;
 	}
 
-	r = coap_packet_init(&response, data, sizeof(data),
-			     COAP_VERSION_1, type, token_length, token,
-			     COAP_RESPONSE_CODE_CHANGED, id);
-	if (r < 0) {
-		return r;
+	ret = coap_packet_init(&response, data, sizeof(data),
+			       COAP_VERSION_1, type, token_length, token,
+			       COAP_RESPONSE_CODE_CHANGED, id);
+	if (ret < 0) {
+		return ret;
 	}
 
-	r = coap_resource_send(resource, &response, addr, addr_len, NULL);
+	ret = coap_resource_send(resource, &response, addr, addr_len, NULL);
 
-	return r;
+	return ret;
 }
 
 static const char * const door_path[] = { "door", NULL };
