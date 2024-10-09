@@ -5,10 +5,8 @@ LOG_MODULE_REGISTER(door_coap_service);
 
 #include <stdio.h>
 
-
-static int door_get(struct coap_resource *resource,
-			 struct coap_packet *request,
-			 struct sockaddr *addr, socklen_t addr_len)
+static int door_get(struct coap_resource *resource, struct coap_packet *request,
+		    struct sockaddr *addr, socklen_t addr_len)
 {
 	uint8_t data[CONFIG_COAP_SERVER_MESSAGE_SIZE];
 	struct coap_packet response;
@@ -35,9 +33,8 @@ static int door_get(struct coap_resource *resource,
 		type = COAP_TYPE_NON_CON;
 	}
 
-	r = coap_packet_init(&response, data, sizeof(data),
-			     COAP_VERSION_1, type, token_length, token,
-			     COAP_RESPONSE_CODE_CONTENT, id);
+	r = coap_packet_init(&response, data, sizeof(data), COAP_VERSION_1, type, token_length,
+			     token, COAP_RESPONSE_CODE_CONTENT, id);
 	if (r < 0) {
 		return r;
 	}
@@ -53,14 +50,12 @@ static int door_get(struct coap_resource *resource,
 		return r;
 	}
 
-	r = snprintf(payload, sizeof(payload),
-		     "Type: %u\nCode: %u\nMID: %u\n", type, code, id);
+	r = snprintf(payload, sizeof(payload), "Type: %u\nCode: %u\nMID: %u\n", type, code, id);
 	if (r < 0) {
 		return r;
 	}
 
-	r = coap_packet_append_payload(&response, (uint8_t *)payload,
-				       strlen(payload));
+	r = coap_packet_append_payload(&response, (uint8_t *)payload, strlen(payload));
 	if (r < 0) {
 		return r;
 	}
@@ -70,8 +65,7 @@ static int door_get(struct coap_resource *resource,
 	return r;
 }
 
-static int door_post(struct coap_resource *resource,
-		     struct coap_packet *request,
+static int door_post(struct coap_resource *resource, struct coap_packet *request,
 		     struct sockaddr *addr, socklen_t addr_len)
 {
 	uint8_t data[CONFIG_COAP_SERVER_MESSAGE_SIZE];
@@ -104,9 +98,8 @@ static int door_post(struct coap_resource *resource,
 		type = COAP_TYPE_NON_CON;
 	}
 
-	ret = coap_packet_init(&response, data, sizeof(data),
-			       COAP_VERSION_1, type, token_length, token,
-			       COAP_RESPONSE_CODE_CHANGED, id);
+	ret = coap_packet_init(&response, data, sizeof(data), COAP_VERSION_1, type, token_length,
+			       token, COAP_RESPONSE_CODE_CHANGED, id);
 	if (ret < 0) {
 		return ret;
 	}
@@ -116,10 +109,10 @@ static int door_post(struct coap_resource *resource,
 	return ret;
 }
 
-static const char * const door_path[] = { "door", NULL };
+static const char *const door_path[] = {"door", NULL};
 COAP_RESOURCE_DEFINE(door, coap_server,
-{
-	.get = door_get,
-	.post = door_post,
-	.path = door_path,
-});
+		     {
+			     .get = door_get,
+			     .post = door_post,
+			     .path = door_path,
+		     });
