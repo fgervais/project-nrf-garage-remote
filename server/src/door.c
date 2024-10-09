@@ -1,9 +1,17 @@
+#include <zephyr/kernel.h>
 #include <zephyr/net/coap_service.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(door_coap_service);
 
 #include <stdio.h>
+
+struct request_list {
+	sys_slist_t list;
+	struct k_mutex lock;
+};
+
+static struct request_list m_request_list;
 
 static int door_get(struct coap_resource *resource, struct coap_packet *request,
 		    struct sockaddr *addr, socklen_t addr_len)
@@ -107,6 +115,14 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 	ret = coap_resource_send(resource, &response, addr, addr_len, NULL);
 
 	return ret;
+}
+
+int door_init(void)
+{
+	sys_slist_init(&m_request_list.list);
+	k_mutex_init(&m_request_list.lock);
+
+	return 0;
 }
 
 static const char *const door_path[] = {"door", NULL};

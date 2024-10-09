@@ -19,6 +19,8 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 #include <mymodule/base/reset.h>
 #include <mymodule/base/watchdog.h>
 
+#include "door.h"
+
 #define BUTTON_PRESS_EVENT BIT(0)
 
 #define ALL_NODES_LOCAL_COAP_MCAST                                                                 \
@@ -107,6 +109,11 @@ int main(void)
 	}
 
 	LOG_INF("starting the COAP service");
+	ret = door_init();
+	if (ret < 0) {
+		LOG_ERR("Could not init door module");
+		return ret;
+	}
 	ret = coap_service_start(&coap_server);
 	if (ret < 0) {
 		LOG_ERR("Could not start COAP service");
