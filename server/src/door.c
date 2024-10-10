@@ -6,12 +6,80 @@ LOG_MODULE_REGISTER(door_coap_service);
 
 #include <stdio.h>
 
-struct request_list {
-	sys_slist_t list;
-	struct k_mutex lock;
+struct request {
+	struct sockaddr addr;
+	uint16_t id;
+	k_timepoint_t timeout;
 };
 
-static struct request_list m_request_list;
+static struct request m_requests[CONFIG_COAP_SERVICE_PENDING_MESSAGES];
+
+static int get_free_request(struct request *request)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(m_requests), i++) {
+		if (sys_timepoint_expired(m_requests.timeout)) {
+			request = &m_requests[i];
+			return 0;
+		}
+	}
+
+	return -ENOMEM;
+}
+
+static bool is_request_answered(struct sockaddr *addr, uint16_t id)
+{
+	int i;
+	const struct sockaddr_in6 *a6;
+	const struct sockaddr_in6 *b6;
+
+	for (i = 0; i < ARRAY_SIZE(m_requests), i++) {
+		a6 = net_sin6(addr);
+		a6 = net_sin6(&m_requests.addr);
+
+		if (a6->sin6_port != b6->sin6_port) {
+			continue;
+		}
+
+		if (!net_ipv6_addr_cmp(&a6->sin6_addr, &b6->sin6_addr)) {
+			continue;
+		}
+
+		if (m_requests.id != id) {
+			continue;
+		}
+
+		if (sys_timepoint_expired(m_requests.timeout)) {
+			continue;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+static int set_request_answered(struct sockaddr *addr, uint16_t id)
+{
+	int i;
+	const struct sockaddr_in6 *a6;
+	const struct sockaddr_in6 *b6;
+
+	for (i = 0; i < ARRAY_SIZE(m_requests), i++) {
+		if (sys_timepoint_expired(m_requests.timeout)) {
+			continue;
+		}
+
+		net_ipaddr_copy(&m_requests.addr, addr);
+		m_requests.id = id;
+		m_requests.timeout = sys_timepoint_calc(K_HOURS(COAP_INIT_ACK_TIMEOUT_MS * 3));
+
+		return 0;
+	}
+
+	return -ENOMEM;
+}
 
 static int door_get(struct coap_resource *resource, struct coap_packet *request,
 		    struct sockaddr *addr, socklen_t addr_len)
@@ -119,9 +187,6 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 
 int door_init(void)
 {
-	sys_slist_init(&m_request_list.list);
-	k_mutex_init(&m_request_list.lock);
-
 	return 0;
 }
 
