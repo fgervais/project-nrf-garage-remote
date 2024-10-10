@@ -38,19 +38,10 @@ static bool is_request_answered(struct sockaddr *addr, uint16_t id)
 		a6 = net_sin6(addr);
 		b6 = net_sin6(&m_requests[i].addr);
 
-		if (a6->sin6_port != b6->sin6_port) {
-			continue;
-		}
-
-		if (!net_ipv6_addr_cmp(&a6->sin6_addr, &b6->sin6_addr)) {
-			continue;
-		}
-
-		if (m_requests[i].id != id) {
-			continue;
-		}
-
-		if (sys_timepoint_expired(m_requests[i].timeout)) {
+		if (a6->sin6_port != b6->sin6_port ||
+		    !net_ipv6_addr_cmp(&a6->sin6_addr, &b6->sin6_addr) ||
+		    m_requests[i].id != id ||
+		    sys_timepoint_expired(m_requests[i].timeout)) {
 			continue;
 		}
 
