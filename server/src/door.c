@@ -18,8 +18,8 @@ static int get_free_request(struct request *request)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(m_requests), i++) {
-		if (sys_timepoint_expired(m_requests.timeout)) {
+	for (i = 0; i < ARRAY_SIZE(m_requests); i++) {
+		if (sys_timepoint_expired(m_requests[i].timeout)) {
 			request = &m_requests[i];
 			return 0;
 		}
@@ -34,9 +34,9 @@ static bool is_request_answered(struct sockaddr *addr, uint16_t id)
 	const struct sockaddr_in6 *a6;
 	const struct sockaddr_in6 *b6;
 
-	for (i = 0; i < ARRAY_SIZE(m_requests), i++) {
+	for (i = 0; i < ARRAY_SIZE(m_requests); i++) {
 		a6 = net_sin6(addr);
-		a6 = net_sin6(&m_requests.addr);
+		b6 = net_sin6(&m_requests[i].addr);
 
 		if (a6->sin6_port != b6->sin6_port) {
 			continue;
@@ -46,11 +46,11 @@ static bool is_request_answered(struct sockaddr *addr, uint16_t id)
 			continue;
 		}
 
-		if (m_requests.id != id) {
+		if (m_requests[i].id != id) {
 			continue;
 		}
 
-		if (sys_timepoint_expired(m_requests.timeout)) {
+		if (sys_timepoint_expired(m_requests[i].timeout)) {
 			continue;
 		}
 
@@ -62,23 +62,19 @@ static bool is_request_answered(struct sockaddr *addr, uint16_t id)
 
 static int set_request_answered(struct sockaddr *addr, uint16_t id)
 {
-	int i;
-	const struct sockaddr_in6 *a6;
-	const struct sockaddr_in6 *b6;
+	int ret;
+	struct request *request = NULL;
 
-	for (i = 0; i < ARRAY_SIZE(m_requests), i++) {
-		if (sys_timepoint_expired(m_requests.timeout)) {
-			continue;
-		}
-
-		net_ipaddr_copy(&m_requests.addr, addr);
-		m_requests.id = id;
-		m_requests.timeout = sys_timepoint_calc(K_HOURS(COAP_INIT_ACK_TIMEOUT_MS * 3));
-
-		return 0;
+	ret = get_free_request(request);
+	if (ret < 0) {
+		return ret;
 	}
 
-	return -ENOMEM;
+	net_ipaddr_copy(&request->addr, addr);
+	request->id = id;
+	request->timeout = sys_timepoint_calc(K_HOURS(CONFIG_COAP_INIT_ACK_TIMEOUT_MS * 3));
+
+	return 0;
 }
 
 static int door_get(struct coap_resource *resource, struct coap_packet *request,
@@ -163,6 +159,11 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 	LOG_INF("📬 POST (door)");
 	LOG_INF("└── type: %u code %u id %u", type, code, id);
 
+	if (is_request_answered(addr, id)) {
+		LOG_INF("↩️ request already answered, skipping");
+		return 0;
+	}
+
 	payload = coap_packet_get_payload(request, &payload_len);
 	if (payload) {
 		LOG_HEXDUMP_INF(payload, payload_len, "POST Payload");
@@ -181,8 +182,16 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 	}
 
 	ret = coap_resource_send(resource, &response, addr, addr_len, NULL);
+	if (ret < 0) {
+		return ret;
+	}
 
-	return ret;
+	ret = set_request_answered(addr, id);
+	if (ret < 0) {
+		LOG_ERR("could not set request as answered");
+	}
+
+	return 0;
 }
 
 int door_init(void)
