@@ -19,18 +19,23 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 #include <mymodule/base/reset.h>
 #include <mymodule/base/watchdog.h>
 
+#include "door.h"
 
-#define BUTTON_PRESS_EVENT		BIT(0)
+#define BUTTON_PRESS_EVENT BIT(0)
 
-#define ALL_NODES_LOCAL_COAP_MCAST \
-        { { { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xfd } } }
-
+#define ALL_NODES_LOCAL_COAP_MCAST                                                                 \
+	{                                                                                          \
+		{                                                                                  \
+			{                                                                          \
+				0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xfd            \
+			}                                                                          \
+		}                                                                                  \
+	}
 
 static K_EVENT_DEFINE(button_events);
 
 static const uint16_t coap_port = 5683;
 COAP_SERVICE_DEFINE(coap_server, NULL, &coap_port, 0);
-
 
 int join_coap_multicast_group(void)
 {
@@ -81,7 +86,7 @@ int main(void)
 	LOG_INF("\n\n🚀 MAIN START (%s) 🚀\n", APP_VERSION_FULL);
 
 	reset_cause = show_and_clear_reset_cause();
-	
+
 	if (app_event_manager_init()) {
 		LOG_ERR("Event manager not initialized");
 	} else {
@@ -104,6 +109,11 @@ int main(void)
 	}
 
 	LOG_INF("starting the COAP service");
+	ret = door_init();
+	if (ret < 0) {
+		LOG_ERR("Could not init door module");
+		return ret;
+	}
 	ret = coap_service_start(&coap_server);
 	if (ret < 0) {
 		LOG_ERR("Could not start COAP service");
@@ -128,10 +138,8 @@ int main(void)
 
 	while (1) {
 		LOG_INF("💤 waiting for events");
-		events = k_event_wait(&button_events,
-				(BUTTON_PRESS_EVENT),
-				true,
-				K_SECONDS(CONFIG_APP_MAIN_LOOP_PERIOD_SEC));
+		events = k_event_wait(&button_events, (BUTTON_PRESS_EVENT), true,
+				      K_SECONDS(CONFIG_APP_MAIN_LOOP_PERIOD_SEC));
 
 		LOG_INF("⏰ events: %08x", events);
 
