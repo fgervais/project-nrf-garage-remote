@@ -85,16 +85,20 @@ static int door_get(struct coap_resource *resource, struct coap_packet *request,
 	uint8_t code;
 	uint8_t type;
 	uint8_t token_length;
-	int r;
+	int ret;
 
 	code = coap_header_get_code(request);
 	type = coap_header_get_type(request);
 	id = coap_header_get_id(request);
 	token_length = coap_header_get_token(request, token);
 
-	LOG_INF("*******");
-	LOG_INF("type: %u code %u id %u", type, code, id);
-	LOG_INF("*******");
+	LOG_INF("📬 GET (door)");
+	LOG_INF("└── type: %u code %u id %u", type, code, id);
+
+	if (is_request_answered(addr, id)) {
+		LOG_INF("↩️  request already answered, skipping");
+		return 0;
+	}
 
 	if (type == COAP_TYPE_CON) {
 		type = COAP_TYPE_ACK;
@@ -102,36 +106,44 @@ static int door_get(struct coap_resource *resource, struct coap_packet *request,
 		type = COAP_TYPE_NON_CON;
 	}
 
-	r = coap_packet_init(&response, data, sizeof(data), COAP_VERSION_1, type, token_length,
+	ret = coap_packet_init(&response, data, sizeof(data), COAP_VERSION_1, type, token_length,
 			     token, COAP_RESPONSE_CODE_CONTENT, id);
-	if (r < 0) {
-		return r;
+	if (ret < 0) {
+		return ret;
 	}
 
-	r = coap_append_option_int(&response, COAP_OPTION_CONTENT_FORMAT,
+	ret = coap_append_option_int(&response, COAP_OPTION_CONTENT_FORMAT,
 				   COAP_CONTENT_FORMAT_TEXT_PLAIN);
-	if (r < 0) {
-		return r;
+	if (ret < 0) {
+		return ret;
 	}
 
-	r = coap_packet_append_payload_marker(&response);
-	if (r < 0) {
-		return r;
+	ret = coap_packet_append_payload_marker(&response);
+	if (ret < 0) {
+		return ret;
 	}
 
-	r = snprintf(payload, sizeof(payload), "Type: %u\nCode: %u\nMID: %u\n", type, code, id);
-	if (r < 0) {
-		return r;
+	ret = snprintf(payload, sizeof(payload), "Type: %u\nCode: %u\nMID: %u\n", type, code, id);
+	if (ret < 0) {
+		return ret;
 	}
 
-	r = coap_packet_append_payload(&response, (uint8_t *)payload, strlen(payload));
-	if (r < 0) {
-		return r;
+	ret = coap_packet_append_payload(&response, (uint8_t *)payload, strlen(payload));
+	if (ret < 0) {
+		return ret;
 	}
 
-	r = coap_resource_send(resource, &response, addr, addr_len, NULL);
+	ret = coap_resource_send(resource, &response, addr, addr_len, NULL);
+	if (ret < 0) {
+		return ret;
+	}
 
-	return r;
+	ret = set_request_answered(addr, id);
+	if (ret < 0) {
+		LOG_ERR("could not set request as answered");
+	}
+
+	return 0;
 }
 
 static int door_post(struct coap_resource *resource, struct coap_packet *request,
