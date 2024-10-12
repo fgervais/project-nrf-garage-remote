@@ -1,3 +1,4 @@
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net/coap_service.h>
 
@@ -13,6 +14,8 @@ struct request {
 };
 
 static struct request m_requests[CONFIG_COAP_SERVICE_PENDING_MESSAGES];
+
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 static int get_free_request(struct request **request)
 {
@@ -178,6 +181,11 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 		LOG_HEXDUMP_INF(payload, payload_len, "POST Payload");
 	}
 
+	ret = gpio_pin_toggle_dt(&led);
+	if (ret < 0) {
+		LOG_ERR("Could not toggle gpio pin");
+	}
+
 	if (type == COAP_TYPE_CON) {
 		type = COAP_TYPE_ACK;
 	} else {
@@ -205,6 +213,17 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 
 int door_init(void)
 {
+	int ret;
+
+	if (!gpio_is_ready_dt(&led)) {
+		return -EIO;
+	}
+
+	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0) {
+		return ret;
+	}
+
 	return 0;
 }
 
