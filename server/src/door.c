@@ -2,7 +2,7 @@
 #include <zephyr/net/coap_service.h>
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(door_coap_service);
+LOG_MODULE_REGISTER(door_coap_service, LOG_LEVEL_DBG);
 
 #include <stdio.h>
 
@@ -14,17 +14,19 @@ struct request {
 
 static struct request m_requests[CONFIG_COAP_SERVICE_PENDING_MESSAGES];
 
-static int get_free_request(struct request *request)
+static int get_free_request(struct request **request)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(m_requests); i++) {
 		if (sys_timepoint_expired(m_requests[i].timeout)) {
-			request = &m_requests[i];
+			LOG_DBG("found a free request at index = %d", i);
+			*request = &m_requests[i];
 			return 0;
 		}
 	}
 
+	LOG_ERR("no free requests");
 	return -ENOMEM;
 }
 
@@ -45,9 +47,11 @@ static bool is_request_answered(struct sockaddr *addr, uint16_t id)
 			continue;
 		}
 
+		LOG_DBG("request already answered at index = %d", i);
 		return true;
 	}
 
+	LOG_INF("📨 request not yet answered");
 	return false;
 }
 
@@ -56,7 +60,7 @@ static int set_request_answered(struct sockaddr *addr, uint16_t id)
 	int ret;
 	struct request *request = NULL;
 
-	ret = get_free_request(request);
+	ret = get_free_request(&request);
 	if (ret < 0) {
 		return ret;
 	}
@@ -64,6 +68,8 @@ static int set_request_answered(struct sockaddr *addr, uint16_t id)
 	net_ipaddr_copy(&request->addr, addr);
 	request->id = id;
 	request->timeout = sys_timepoint_calc(K_HOURS(CONFIG_COAP_INIT_ACK_TIMEOUT_MS * 3));
+
+	LOG_DBG("request answered set");
 
 	return 0;
 }
@@ -151,7 +157,7 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 	LOG_INF("└── type: %u code %u id %u", type, code, id);
 
 	if (is_request_answered(addr, id)) {
-		LOG_INF("↩️ request already answered, skipping");
+		LOG_INF("↩️  request already answered, skipping");
 		return 0;
 	}
 
