@@ -70,7 +70,7 @@ static int set_request_answered(struct sockaddr *addr, uint16_t id)
 
 	net_ipaddr_copy(&request->addr, addr);
 	request->id = id;
-	request->timeout = sys_timepoint_calc(K_HOURS(CONFIG_COAP_INIT_ACK_TIMEOUT_MS * 3));
+	request->timeout = sys_timepoint_calc(K_MSEC(CONFIG_COAP_INIT_ACK_TIMEOUT_MS * 3));
 
 	LOG_DBG("request answered set");
 
