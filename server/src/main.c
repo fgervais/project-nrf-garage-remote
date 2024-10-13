@@ -37,6 +37,9 @@ static K_EVENT_DEFINE(button_events);
 static const uint16_t coap_port = 5683;
 COAP_SERVICE_DEFINE(coap_server, NULL, &coap_port, 0);
 
+static const struct gpio_dt_spec power_led = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
+static const struct gpio_dt_spec initialized_led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+
 int join_coap_multicast_group(void)
 {
 	struct in6_addr mcast_addr6 = ALL_NODES_LOCAL_COAP_MCAST;
@@ -87,6 +90,24 @@ int main(void)
 
 	reset_cause = show_and_clear_reset_cause();
 
+	if (!gpio_is_ready_dt(&power_led)) {
+		return -EIO;
+	}
+
+	ret = gpio_pin_configure_dt(&power_led, GPIO_OUTPUT_ACTIVE);
+	if (ret < 0) {
+		return ret;
+	}
+
+	if (!gpio_is_ready_dt(&initialized_led)) {
+		return -EIO;
+	}
+
+	ret = gpio_pin_configure_dt(&initialized_led, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0) {
+		return ret;
+	}
+
 	if (app_event_manager_init()) {
 		LOG_ERR("Event manager not initialized");
 	} else {
@@ -118,6 +139,11 @@ int main(void)
 	if (ret < 0) {
 		LOG_ERR("Could not start COAP service");
 		return ret;
+	}
+
+	ret = gpio_pin_set_dt(&initialized_led, 1);
+	if (ret < 0) {
+		LOG_ERR("Could not set initialized led");
 	}
 
 	LOG_INF("🆗 initialized");

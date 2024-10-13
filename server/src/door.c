@@ -15,7 +15,7 @@ struct request {
 
 static struct request m_requests[CONFIG_COAP_SERVICE_PENDING_MESSAGES];
 
-static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+static const struct gpio_dt_spec door_led = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
 
 static int get_free_request(struct request **request)
 {
@@ -181,9 +181,9 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 		LOG_HEXDUMP_INF(payload, payload_len, "POST Payload");
 	}
 
-	ret = gpio_pin_toggle_dt(&led);
+	ret = gpio_pin_toggle_dt(&door_led);
 	if (ret < 0) {
-		LOG_ERR("Could not toggle gpio pin");
+		LOG_ERR("Could not toggle door led");
 	}
 
 	if (type == COAP_TYPE_CON) {
@@ -215,11 +215,11 @@ int door_init(void)
 {
 	int ret;
 
-	if (!gpio_is_ready_dt(&led)) {
+	if (!gpio_is_ready_dt(&door_led)) {
 		return -EIO;
 	}
 
-	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
+	ret = gpio_pin_configure_dt(&door_led, GPIO_OUTPUT_INACTIVE);
 	if (ret < 0) {
 		return ret;
 	}
