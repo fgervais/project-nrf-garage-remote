@@ -5,6 +5,7 @@
 #include <zephyr/net/coap_client.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/pm/device.h>
+#include <zephyr/sys/reboot.h>
 #include <zephyr/debug/thread_analyzer.h>
 
 #define MODULE main
@@ -23,6 +24,7 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 
 #define BUTTON_PRESS_EVENT		BIT(0)
+#define MANUAL_REBOOT_TOKEN		(uint8_t)0x38
 
 // [00:00:13.266,204] <inf> openthread: 🗞️  address added
 // [00:00:13.266,265] <inf> openthread: fdb5:341:c736:7c8d:b505:d461:ecbd:9789
@@ -149,9 +151,20 @@ int main(void)
 
 	LOG_INF("\n\n🚀 MAIN START (%s) 🚀\n", APP_VERSION_FULL);
 
-	reset_cause = show_reset_cause();
-	clear_reset_cause();
-	
+	reset_cause = show_and_clear_reset_cause();
+
+	if (is_reset_cause_watchdog(reset_cause)
+	    || is_reset_cause_button(reset_cause)) {
+		ret = openthread_erase_persistent_info();
+		if (ret < 0) {
+			LOG_WRN("Could not erase openthread info");
+		}
+		else {
+			k_sleep(K_SECONDS(3));
+			sys_reboot(MANUAL_REBOOT_TOKEN);
+		}
+	}
+
 	if (app_event_manager_init()) {
 		LOG_ERR("Event manager not initialized");
 	} else {

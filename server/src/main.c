@@ -5,6 +5,7 @@
 #include <zephyr/net/coap_service.h>
 #include <zephyr/net/net_if.h>
 #include <zephyr/pm/device.h>
+#include <zephyr/sys/reboot.h>
 #include <zephyr/debug/thread_analyzer.h>
 
 #define MODULE main
@@ -21,7 +22,8 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 #include "door.h"
 
-#define BUTTON_PRESS_EVENT BIT(0)
+#define BUTTON_PRESS_EVENT		BIT(0)
+#define MANUAL_REBOOT_TOKEN		(uint8_t)0x38
 
 #define ALL_NODES_LOCAL_COAP_MCAST                                                                 \
 	{                                                                                          \
@@ -89,6 +91,18 @@ int main(void)
 	LOG_INF("\n\n🚀 MAIN START (%s) 🚀\n", APP_VERSION_FULL);
 
 	reset_cause = show_and_clear_reset_cause();
+
+	if (is_reset_cause_watchdog(reset_cause)
+	    || is_reset_cause_button(reset_cause)) {
+		ret = openthread_erase_persistent_info();
+		if (ret < 0) {
+			LOG_WRN("Could not erase openthread info");
+		}
+		else {
+			k_sleep(K_SECONDS(3));
+			sys_reboot(MANUAL_REBOOT_TOKEN);
+		}
+	}
 
 	if (!gpio_is_ready_dt(&power_led)) {
 		return -EIO;
