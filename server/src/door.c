@@ -171,19 +171,18 @@ static int door_post(struct coap_resource *resource, struct coap_packet *request
 	LOG_INF("📬 POST (door)");
 	LOG_INF("└── type: %u code %u id %u", type, code, id);
 
-	if (is_request_answered(addr, id)) {
-		LOG_INF("↩️  request already answered, skipping");
-		return 0;
+	if (!is_request_answered(addr, id)) {
+		// LOG_INF("↩️  request already answered, skipping");
+
+		ret = gpio_pin_toggle_dt(&door_led);
+		if (ret < 0) {
+			LOG_ERR("Could not toggle door led");
+		}
 	}
 
 	payload = coap_packet_get_payload(request, &payload_len);
 	if (payload) {
 		LOG_HEXDUMP_INF(payload, payload_len, "POST Payload");
-	}
-
-	ret = gpio_pin_toggle_dt(&door_led);
-	if (ret < 0) {
-		LOG_ERR("Could not toggle door led");
 	}
 
 	if (type == COAP_TYPE_CON) {
